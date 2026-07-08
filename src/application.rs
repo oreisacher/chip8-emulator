@@ -5,6 +5,9 @@ use crate::renderer::Renderer;
 use crate::sound::Sound;
 use crate::window::Window;
 
+const CPU_CLOCK_HZ: i32 = 1000;
+const TIMER_HZ: f64 = 60.0;
+
 pub struct Application {
     chip8 : Chip8,
     sound : Sound,
@@ -13,8 +16,6 @@ pub struct Application {
     glfw : Glfw,
 }
 
-const INSTRUCTION_PER_SECOND: i32 = 700;
-
 impl Application {
     pub fn new(rom_path : String) -> Application {
         // Init GLFW
@@ -22,7 +23,7 @@ impl Application {
         let mut glfw = glfw::init(fail_on_errors!()).expect("GLFW init Failed");
 
         // Create window
-        let window = Window::new(&mut glfw, 700, 350, "Chip8 Emulator".to_string());
+        let mut window = Window::new(&mut glfw, 700, 350, "Chip8 Emulator (No rom)".to_string());
 
         // Disable V-Sync
         glfw.set_swap_interval(glfw::SwapInterval::None);
@@ -30,6 +31,8 @@ impl Application {
         // Create Chip8 and load rom
         let mut chip8 = Chip8::new();
         chip8.load_rom(rom_path);
+
+        window.set_title(format!("Chip8 Emulator ({})", &chip8.loaded_rom));
 
         Application {
             chip8,
@@ -41,41 +44,46 @@ impl Application {
     }
 
     pub fn run(&mut self) {
-        let mut timer = Instant::now();
-        let mut frame_time: Instant;
-        let target_frame_time = Duration::from_secs_f64(1.0/(INSTRUCTION_PER_SECOND as f64));
+        let cycles_per_tick = (CPU_CLOCK_HZ as f64 / TIMER_HZ).round() as u32;
+        let target_tick_duration = Duration::from_secs_f64(1.0 / TIMER_HZ);
 
         while !self.window.glfw_window.should_close() {
-            frame_time = Instant::now();
+            let tick_start = Instant::now();
 
-            self.chip8.update_keyboard_states();
+            // --- Input ---
             self.glfw.poll_events();
+            self.chip8.update_keyboard_states();
             self.process_events();
 
-            self.chip8.cycle();
-
-            // Update Chip8 Timers
-            if timer.elapsed() >= self.chip8.timer_interval {
-                timer = Instant::now();
-                self.chip8.update_timers();
+            // --- CPU ---
+            for _ in 0..cycles_per_tick {
+                self.chip8.cycle();
             }
 
-            // Update sound
-            if self.chip8.playing_sound() {
+            // --- Timers ---
+            // Once per outer loop. Loop runs at fixed Hz (default 60)
+            self.chip8.update_timers();
+
+            // --- Sound ---
+            if self.chip8.sound_timer > 0 {
                 self.sound.play_sound();
             } else {
                 self.sound.stop_sound();
             }
 
+            // --- Render ---
             self.renderer.draw(&self.chip8.fb);
-
             self.window.swap_buffers();
 
-            let elapsed = frame_time.elapsed();
-            if elapsed < target_frame_time {
-                std::thread::sleep(target_frame_time - elapsed);
+            // Ensure that this loop runs at TIMER_HZ
+            let elapsed = tick_start.elapsed();
+            if elapsed < target_tick_duration {
+                std::thread::sleep(target_tick_duration - elapsed);
             }
         }
+
+        // Poll events once more to avoid a segfault
+        self.glfw.poll_events();
     }
 
     fn process_events(&mut self) {
@@ -85,32 +93,32 @@ impl Application {
                     self.renderer.resize(width, height);
                 },
                 glfw::WindowEvent::Key(key, _, action, _) => {
-                    let mut chip8_key;
+                    let chip8_key : Option<u8> = match key {
+                        Key::Num1 => Some(0x1),
+                        Key::Num2 => Some(0x2),
+                        Key::Num3 => Some(0x3),
+                        Key::Num4 => Some(0xC),
+                        Key::Q => Some(0x4),
+                        Key::W => Some(0x5),
+                        Key::E => Some(0x6),
+                        Key::R => Some(0xD),
+                        Key::A => Some(0x7),
+                        Key::S => Some(0x8),
+                        Key::D => Some(0x9),
+                        Key::F => Some(0xE),
+                        Key::Z => Some(0xA),
+                        Key::X => Some(0x0),
+                        Key::C => Some(0xB),
+                        Key::V => Some(0xF),
+                        _ => None
+                    };
 
-                    match key {
-                        Key::Num1 => chip8_key = 0x1,
-                        Key::Num2 => chip8_key = 0x2,
-                        Key::Num3 => chip8_key = 0x3,
-                        Key::Num4 => chip8_key = 0xC,
-                        Key::Q => chip8_key = 0x4,
-                        Key::W => chip8_key = 0x5,
-                        Key::E => chip8_key = 0x6,
-                        Key::R => chip8_key = 0xD,
-                        Key::A => chip8_key = 0x7,
-                        Key::S => chip8_key = 0x8,
-                        Key::D => chip8_key = 0x9,
-                        Key::F => chip8_key = 0xE,
-                        Key::Z => chip8_key = 0xA,
-                        Key::X => chip8_key = 0x0,
-                        Key::C => chip8_key = 0xB,
-                        Key::V => chip8_key = 0xF,
-                        _ => chip8_key = 0x0
-                    }
-
-                    if action == Action::Press || action == Action::Repeat {
-                        self.chip8.press_key(chip8_key);
-                    } else {
-                        self.chip8.release_key(chip8_key);
+                    if let Some(key) = chip8_key {
+                        if action == Action::Press || action == Action::Repeat {
+                            self.chip8.press_key(key);
+                        } else {
+                            self.chip8.release_key(key);
+                        }
                     }
                 }
                 _ => ()

@@ -1,5 +1,3 @@
-use crate::application::Application;
-
 mod chip8;
 mod memory;
 mod framebuffer;
@@ -8,6 +6,10 @@ mod window;
 mod shader;
 mod application;
 mod sound;
+mod texture;
+mod keypad;
+
+use crate::application::Application;
 
 fn main() {
     let args : Vec<String> = std::env::args().collect();

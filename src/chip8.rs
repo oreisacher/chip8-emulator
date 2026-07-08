@@ -1,10 +1,13 @@
+use std::path::Path;
 use std::time::Duration;
 use rand::RngExt;
 use crate::framebuffer::Framebuffer;
+use crate::keypad::Keypad;
 use crate::memory::Memory;
-use crate::sound::Sound;
 
 pub struct Chip8 {
+    pub loaded_rom : String,
+
     // --- RAM
     mem : Memory,
 
@@ -29,7 +32,7 @@ pub struct Chip8 {
     stack : [u16; 16],
 
     // --- Keypad
-    keypad : [KeyState; 16],
+    keypad : Keypad,
 
     // --- Framebuffer
     pub fb : Framebuffer,
@@ -95,6 +98,7 @@ impl Chip8 {
         }
 
         Chip8 {
+            loaded_rom : "".to_string(),
             mem,
             v : [0; 16],
             i : 0,
@@ -105,7 +109,7 @@ impl Chip8 {
             sp : 0,
             stack : [0; 16],
             fb : Framebuffer::new(),
-            keypad: [KeyState { prev_state: false, curr_state : false }; 16],
+            keypad: Keypad::new(),
             quirks : Quirks::new()
         }
     }
@@ -113,13 +117,16 @@ impl Chip8 {
     pub fn load_rom(&mut self, rom_path : String) {
         println!("Loading ROM: {}", rom_path);
 
-        let rom : Vec<u8> = std::fs::read(rom_path).expect("Could not load ROM");
+        let rom : Vec<u8> = std::fs::read(&rom_path).expect("Could not load ROM");
 
         for i in 0..rom.len() {
             self.mem.write_byte(PROGRAM_START + i as u16, rom[i]);
         }
 
-        println!("Loaded {} bytes from ROM", rom.len());
+        // Extract name of loaded rom
+        self.loaded_rom = Path::new(&rom_path).file_stem().unwrap().to_str().unwrap().to_string();
+
+        println!("Loaded {} bytes from ROM '{}'", rom.len(), self.loaded_rom);
     }
 
     pub fn cycle(&mut self) {
@@ -197,25 +204,20 @@ impl Chip8 {
         }
     }
 
+    // --- Keyboard ---
     pub fn update_keyboard_states(&mut self) {
-        for i in self.keypad.iter_mut() {
-            i.prev_state = i.curr_state;
-        }
-    }
-
-    pub fn playing_sound(&self) -> bool {
-        self.sound_timer > 0
+        self.keypad.tick();
     }
 
     pub fn press_key(&mut self, key : u8) {
-        self.keypad[key as usize].curr_state = true;
+        self.keypad.press_key(key);
     }
 
     pub fn release_key(&mut self, key : u8) {
-        self.keypad[key as usize].curr_state = false;
+        self.keypad.release_key(key);
     }
 
-    // --- Operations
+    // --- Operations ---
     fn op_00e0(&mut self, opcode : u16) {
         self.fb.clear();
     }
@@ -440,14 +442,14 @@ impl Chip8 {
     fn op_ex9e(&mut self, opcode : u16) {
         let x = ((opcode & 0x0F00) >> 8) as usize;
 
-        if self.keypad[self.v[x] as usize].curr_state {
+        if self.keypad.is_key_down(self.v[x]) {
             self.pc += 2;
         }
     }
     fn op_exa1(&mut self, opcode : u16) {
         let x = ((opcode & 0x0F00) >> 8) as usize;
 
-        if !self.keypad[self.v[x] as usize].curr_state {
+        if !self.keypad.is_key_down(self.v[x]) {
             self.pc += 2;
         }
     }
@@ -459,15 +461,10 @@ impl Chip8 {
     fn op_fx0a(&mut self, opcode : u16) {
         let x = ((opcode & 0x0F00) >> 8) as usize;
 
-        for i in 0..16 {
-            if self.keypad[i].prev_state && !self.keypad[i].curr_state {
-                self.v[x] = i as u8;
-                return;
-            }
+        match self.keypad.just_released() {
+            Some(key) => self.v[x] = key,
+            None => self.pc -= 2,
         }
-
-        // Dont move to next instruction
-        self.pc -= 2;
     }
     fn op_fx15(&mut self, opcode : u16) {
         let x = ((opcode & 0x0F00) >> 8) as u8;

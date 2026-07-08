@@ -1,11 +1,12 @@
 use gl::types::{GLint, GLuint};
 use crate::framebuffer::Framebuffer;
 use crate::shader::Shader;
+use crate::texture::Texture;
 
 #[derive(Debug)]
 pub struct Renderer {
     shader : Shader,
-    texture : GLuint,
+    texture : Texture,
     vao : GLuint
 }
 
@@ -47,39 +48,20 @@ const FRAGMENT_SHADER_SOURCE : &str = r#"
 
 impl Renderer {
     pub fn new() -> Renderer {
-        // Init Shader
+        // --- Shader ---
         let shader = Shader::new(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE);
+        shader.bind();
+        shader.set_int("tex", 0);
 
-        unsafe {
-            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
-        }
+        // --- Texture ---
+        let texture = Texture::new(64, 32, gl::R8, gl::RED);
+        texture.bind();
 
-        let mut texture = 0;
-        unsafe {
-            // Init texture
-            gl::GenTextures(1, &mut texture);
-            gl::ActiveTexture(gl::TEXTURE0);
-            gl::BindTexture(gl::TEXTURE_2D, texture);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
-
-            gl::TexImage2D(gl::TEXTURE_2D,
-                           0,
-                           gl::R8 as GLint,
-                           64,
-                           32,
-                           0,
-                           gl::RED,
-                           gl::UNSIGNED_BYTE,
-                           std::ptr::null());
-
-            gl::Uniform1i(gl::GetUniformLocation(shader.id, b"tex\0".as_ptr() as *const _), 0);
-        }
-
+        // --- OpenGL ---
         let mut vao = 0;
         unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             gl::GenVertexArrays(1, &mut vao);
         }
 
@@ -93,15 +75,9 @@ impl Renderer {
     pub fn draw(&self, fb : &Framebuffer) {
         unsafe {
             // Upload framebuffer data to texture
-            gl::TexSubImage2D(
-                gl::TEXTURE_2D,
-                0, 0, 0, 64, 32, gl::RED, gl::UNSIGNED_BYTE,
-                fb.pixels.as_ptr() as *const _
-            );
+            self.texture.set_framebuffer_data(fb);
 
-            gl::UseProgram(self.shader.id);
-
-            // Draw to screen
+            // Draw texture to screen
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::BindVertexArray(self.vao);
             gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
@@ -118,7 +94,6 @@ impl Renderer {
 impl Drop for Renderer {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteTextures(1, &self.texture);
             gl::DeleteVertexArrays(1, &self.vao);
         }
     }

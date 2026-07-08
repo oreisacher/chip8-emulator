@@ -60,4 +60,24 @@ impl Shader {
 
         Shader { id : shader }
     }
+
+    pub fn bind(&self) {
+        unsafe {
+            gl::UseProgram(self.id);
+        }
+    }
+
+    pub fn set_int(&self, name : &str, value : GLint) {
+        unsafe {
+            gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr() as *const _), value);
+        }
+    }
+}
+
+impl Drop for Shader {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteShader(self.id);
+        }
+    }
 }

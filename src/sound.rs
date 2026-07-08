@@ -8,7 +8,9 @@ pub struct Sound {
 
 impl Sound {
     pub fn new() -> Sound {
-        let handle = rodio::DeviceSinkBuilder::open_default_sink().expect("Can't create audio sink");
+        let mut handle = rodio::DeviceSinkBuilder::open_default_sink().expect("Can't create audio sink");
+        handle.log_on_drop(false);
+
         let player = Player::connect_new(&handle.mixer());
 
         Sound {
@@ -27,9 +29,5 @@ impl Sound {
 
     pub fn stop_sound(&mut self) {
         self.player.stop();
-    }
-
-    pub fn playing(&mut self) -> bool {
-        self.player.empty()
     }
 }

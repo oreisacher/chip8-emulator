@@ -4,10 +4,9 @@ use glfw::WindowMode::Windowed;
 pub struct Window {
     width : u32,
     height : u32,
-    title : String,
 
-    pub events : GlfwReceiver<(f64, WindowEvent)>,
     pub glfw_window : PWindow,
+    pub events : GlfwReceiver<(f64, WindowEvent)>,
 }
 
 impl Window {
@@ -25,7 +24,6 @@ impl Window {
         Window {
             width,
             height,
-            title,
             glfw_window : window,
             events
         }
@@ -33,5 +31,9 @@ impl Window {
 
     pub fn swap_buffers(&mut self) {
         self.glfw_window.swap_buffers();
+    }
+
+    pub fn set_title(&mut self, title : String) {
+        self.glfw_window.set_title(&title);
     }
 }
