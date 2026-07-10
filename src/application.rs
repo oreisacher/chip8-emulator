@@ -1,9 +1,9 @@
 use std::time::{Duration, Instant};
 use glfw::{Action, Glfw, Key};
-use crate::chip8::Chip8;
-use crate::renderer::Renderer;
-use crate::sound::Sound;
-use crate::window::Window;
+use crate::emulator::chip8::Chip8;
+use crate::emulator::sound::Sound;
+use crate::rendering::renderer::Renderer;
+use crate::rendering::window::Window;
 
 const CPU_CLOCK_HZ: i32 = 1000;
 const TIMER_HZ: f64 = 60.0;

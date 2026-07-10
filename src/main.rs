@@ -1,13 +1,6 @@
-mod chip8;
-mod memory;
-mod framebuffer;
-mod renderer;
-mod window;
-mod shader;
+mod emulator;
+mod rendering;
 mod application;
-mod sound;
-mod texture;
-mod keypad;
 
 use crate::application::Application;
 

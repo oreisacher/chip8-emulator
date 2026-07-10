@@ -1,9 +1,9 @@
 use std::path::Path;
 use std::time::Duration;
 use rand::RngExt;
-use crate::framebuffer::Framebuffer;
-use crate::keypad::Keypad;
-use crate::memory::Memory;
+use super::framebuffer::Framebuffer;
+use super::keypad::Keypad;
+use super::memory::Memory;
 
 pub struct Chip8 {
     pub loaded_rom : String,

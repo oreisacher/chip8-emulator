@@ -1,5 +1,5 @@
 use gl::types::{GLenum, GLint, GLsizei, GLuint};
-use crate::framebuffer::Framebuffer;
+use crate::emulator::framebuffer::Framebuffer;
 
 #[derive(Debug)]
 pub struct Texture {

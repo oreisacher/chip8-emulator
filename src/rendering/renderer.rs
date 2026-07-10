@@ -1,7 +1,7 @@
-use gl::types::{GLint, GLuint};
-use crate::framebuffer::Framebuffer;
-use crate::shader::Shader;
-use crate::texture::Texture;
+use gl::types::{GLuint};
+use crate::emulator::framebuffer::Framebuffer;
+use super::shader::Shader;
+use super::texture::Texture;
 
 #[derive(Debug)]
 pub struct Renderer {
