@@ -1,14 +1,15 @@
 use std::time::{Duration, Instant};
 use glfw::{Action, Glfw, Key};
+use crate::config::Config;
 use crate::emulator::chip8::Chip8;
 use crate::emulator::sound::Sound;
 use crate::rendering::renderer::Renderer;
 use crate::rendering::window::Window;
 
-const CPU_CLOCK_HZ: i32 = 1000;
 const TIMER_HZ: f64 = 60.0;
 
 pub struct Application {
+    config : Config,
     chip8 : Chip8,
     sound : Sound,
     renderer : Renderer,
@@ -20,7 +21,7 @@ impl Application {
     pub fn new(rom_path : String) -> Application {
         // Init GLFW
         use glfw::fail_on_errors;
-        let mut glfw = glfw::init(fail_on_errors!()).expect("GLFW init Failed");
+        let mut glfw = glfw::init(fail_on_errors!()).expect("GLFW init failed.");
 
         // Create window
         let mut window = Window::new(&mut glfw, 700, 350, "Chip8 Emulator (No rom)".to_string());
@@ -28,13 +29,17 @@ impl Application {
         // Disable V-Sync
         glfw.set_swap_interval(glfw::SwapInterval::None);
 
+        // Read config
+        let config = Config::load("config.toml");
+
         // Create Chip8 and load rom
-        let mut chip8 = Chip8::new();
+        let mut chip8 = Chip8::new(&config);
         chip8.load_rom(rom_path);
 
         window.set_title(format!("Chip8 Emulator ({})", &chip8.loaded_rom));
 
         Application {
+            config,
             chip8,
             sound : Sound::new(),
             renderer : Renderer::new(),
@@ -44,7 +49,7 @@ impl Application {
     }
 
     pub fn run(&mut self) {
-        let cycles_per_tick = (CPU_CLOCK_HZ as f64 / TIMER_HZ).round() as u32;
+        let cycles_per_tick = (self.config.cpu_hz as f64 / TIMER_HZ).round() as u32;
         let target_tick_duration = Duration::from_secs_f64(1.0 / TIMER_HZ);
 
         while !self.window.glfw_window.should_close() {
