@@ -20,7 +20,16 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libasound2-dev pkg-config
+        sudo apt-get install -y \
+          pkg-config \
+          libasound2-dev \
+          libwayland-dev \
+          wayland-protocols \
+          libxkbcommon-dev \
+          libx11-dev \
+          libxrandr-dev \
+          libxi-dev \
+          libxcursor-dev
     
     - name: Build
       run: cargo build --verbose
