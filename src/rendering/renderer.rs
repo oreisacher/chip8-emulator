@@ -1,4 +1,5 @@
 use gl::types::{GLuint};
+use crate::config::Config;
 use crate::emulator::framebuffer::Framebuffer;
 use super::shader::Shader;
 use super::texture::Texture;
@@ -30,6 +31,8 @@ const FRAGMENT_SHADER_SOURCE : &str = r#"
     #version 430
 
     uniform sampler2D tex;
+    uniform vec3 onColor;
+    uniform vec3 offColor;
 
     in vec2 uv;
 
@@ -39,19 +42,21 @@ const FRAGMENT_SHADER_SOURCE : &str = r#"
         float cell = texture(tex, uv).r;
 
         if (cell > 0.0f) {
-            FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            FragColor = vec4(onColor, 1.0);
         } else {
-            FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            FragColor = vec4(offColor, 1.0);
         }
     }
 "#;
 
 impl Renderer {
-    pub fn new() -> Renderer {
+    pub fn new(config : &Config) -> Renderer {
         // --- Shader ---
         let shader = Shader::new(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE);
         shader.bind();
         shader.set_int("tex", 0);
+        shader.set_vec3("onColor", config.display.on_color);
+        shader.set_vec3("offColor", config.display.off_color);
 
         // --- Texture ---
         let texture = Texture::new(64, 32, gl::R8, gl::RED);

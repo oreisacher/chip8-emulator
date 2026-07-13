@@ -69,7 +69,15 @@ impl Shader {
 
     pub fn set_int(&self, name : &str, value : GLint) {
         unsafe {
-            gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr() as *const _), value);
+            let cname = CString::new(name).expect("Unable to create CString.");
+            gl::Uniform1i(gl::GetUniformLocation(self.id, cname.as_ptr()), value);
+        }
+    }
+
+    pub fn set_vec3(&self, name : &str, value : [f32; 3]) {
+        unsafe {
+            let cname = CString::new(name).expect("Unable to create CString.");
+            gl::Uniform3f(gl::GetUniformLocation(self.id, cname.as_ptr()), value[0], value[1], value[2]);
         }
     }
 }

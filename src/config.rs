@@ -2,17 +2,20 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use crate::emulator::quirks::Quirks;
+use crate::rendering::display_settings::DisplaySettings;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub cpu_hz: u32,
+    pub display : DisplaySettings,
     pub quirks: Quirks,
 }
 
 impl Default for Config {
-    fn default() -> Self {
-        Self {
+    fn default() -> Config {
+        Config {
             cpu_hz: 700,
+            display : DisplaySettings::default(),
             quirks: Quirks::default(),
         }
     }

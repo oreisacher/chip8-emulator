@@ -38,11 +38,14 @@ impl Application {
 
         window.set_title(format!("Chip8 Emulator ({})", &chip8.loaded_rom));
 
+        // Create renderer
+        let renderer = Renderer::new(&config);
+
         Application {
             config,
             chip8,
             sound : Sound::new(),
-            renderer : Renderer::new(),
+            renderer,
             glfw,
             window
         }
